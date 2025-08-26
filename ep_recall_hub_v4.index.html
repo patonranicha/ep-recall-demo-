@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EP Recall Hub — Interactive v4</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#ffffff; --ink:#1c2530; --muted:#617180;
+    --accent:#0d6c8f; --accent-2:#cfe6ef; --sand:#f4efe8;
+    --good:#216869; --warn:#b26a00; --danger:#9a2e2e;
+    --shadow:0 6px 18px rgba(0,0,0,.06); --mono: ui-monospace, Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    --mark:#fff3b0;
+  }
+  [data-theme="dark"]{
+    --bg:#0f1418; --card:#141a1f; --ink:#e6ebef; --muted:#9db0bf;
+    --accent:#6db6cf; --accent-2:#243b45; --sand:#1d2227;
+    --good:#7bd1c7; --warn:#ffb24a; --danger:#ff7a7a;
+    --shadow:0 6px 18px rgba(0,0,0,.25); --mark:#2f3d14;
+  }
+  * { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+  html,body{height:100%}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); line-height:1.45;}
+  .app{display:grid; grid-template-columns: 280px 1fr; gap:24px; padding:20px; max-width:1400px; margin:0 auto;}
+  nav{position:sticky; top:16px; align-self:start; background:var(--card); border-radius:14px; box-shadow:var(--shadow); padding:16px 14px;}
+  nav h2{margin:6px 8px 10px; font-size:14px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase}
+  nav a{display:block; padding:10px 12px; border-radius:10px; color:var(--ink); text-decoration:none; font-weight:700; margin:4px 0}
+  nav a:active, nav a:hover{background:var(--accent-2);}
+  .brand{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; background:var(--sand); margin-bottom:10px;}
+  .brand .badge{width:28px; height:28px; border-radius:8px; background:var(--accent);}
+  .controls{display:flex; gap:8px; align-items:center; justify-content:space-between; margin-top:10px; width:100%}
+  .search{width:520px; max-width:60vw; padding:12px 14px; border:1px solid #0000; border-radius:12px; background:var(--card); box-shadow:var(--shadow); font-size:16px}
+  header.top{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:12px; justify-content:space-between;}
+  header.top .title{font-size:22px; font-weight:800; letter-spacing:.01em}
+  header.top .subtitle{color:var(--muted); font-size:14px}
+  section.group{background:var(--card); border-radius:16px; padding:18px; box-shadow:var(--shadow);}
+  .grid{display:grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap:14px;}
+  details.card{border:1px solid rgba(0,0,0,.06); border-radius:14px; padding:12px 12px; background:var(--card);}
+  details[open]{outline:2px solid var(--accent-2)}
+  summary{list-style:none; display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:800}
+  summary .tag{font-size:12px; color:var(--muted); padding:2px 8px; border-radius:999px; background:var(--accent-2)}
+  .pill{display:inline-block; padding:3px 8px; border-radius:999px; background:var(--sand); font-size:12px; color:var(--muted); margin-left:6px}
+  .copy{font-family:var(--mono); font-size:13px; background:var(--bg); border-radius:10px; padding:12px; position:relative; border:1px solid rgba(0,0,0,.06); user-select:text}
+  .btn{font-family:var(--sans); font-size:13px; padding:10px 12px; border-radius:10px; border:1px solid rgba(0,0,0,.08); background:var(--accent-2); cursor:pointer; margin:8px 8px 0 0; -webkit-user-select:none; user-select:none;}
+  .btn.inline{position:absolute; right:8px; top:8px}
+  .hint{font-size:12px; color:var(--muted)}
+  .callout{border-left:4px solid var(--warn); background:rgba(255,180,0,.08); padding:8px 10px; border-radius:8px}
+  .field{display:flex; gap:8px; align-items:center; margin:6px 0}
+  .field input{flex:1; padding:8px 10px; border-radius:10px; border:1px solid rgba(0,0,0,.08); background:var(--bg); color:var(--ink)}
+  .svgwrap{background:var(--bg); border-radius:12px; padding:8px; border:1px solid rgba(0,0,0,.08)}
+  footer{grid-column:1/-1; color:var(--muted); font-size:12px; padding:8px}
+  mark{background:var(--mark); padding:0 2px; border-radius:3px}
+  @media (max-width:900px){ .app{grid-template-columns:1fr} nav{position:static} .search{max-width:100%; width:100%} }
+
+  /* Toggle switch */
+  .switch{position:relative; display:inline-block; width:54px; height:30px;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:#cfd9df; transition:.2s; border-radius:999px; box-shadow:var(--shadow)}
+  .slider:before{position:absolute; content:""; height:24px; width:24px; left:3px; top:3px; background:white; transition:.2s; border-radius:50%;}
+  input:checked + .slider{background:#6db6cf;}
+  input:checked + .slider:before{transform:translateX(24px);}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <div class="title">EP Recall Hub — Interactive</div>
+      <div class="subtitle">Minimal, low-saturation design • Fast scanning • Built for real-time use</div>
+    </div>
+    <div class="controls">
+      <input id="search" class="search" placeholder="Type to search instantly… e.g., 'ketamine', 'posterior MI', 'cric'">
+      <label class="switch" title="Dark mode">
+        <input id="toggle" type="checkbox">
+        <span class="slider"></span>
+      </label>
+      <button id="openAll" class="btn" type="button">Open All</button>
+      <button id="closeAll" class="btn" type="button">Collapse All</button>
+    </div>
+  </header>
+
+  <nav>
+    <div class="brand">
+      <div class="badge"></div>
+      <div>
+        <div style="font-weight:800">EP Recall Hub</div>
+        <div class="hint">Your AI-era quick reference</div>
+      </div>
+    </div>
+    <h2>Outline</h2>
+    <a href="#algorithms">1. Algorithms</a>
+    <a href="#adult-doses">2. Adult Doses</a>
+    <a href="#peds">3. Pediatric Doses</a>
+    <a href="#procedures">4. Procedures</a>
+    <a href="#danger">5. Danger Patterns</a>
+    <a href="#tox">6. Tox Antidotes</a>
+    <a href="#ecg">7. ECG & Ischemia</a>
+    <a href="#vent">8. Vent Basics</a>
+    <a href="#sedation">9. Sedation & Analgesia</a>
+    <a href="#imaging">10. Imaging Red Flags</a>
+    <a href="#systems">11. Systems & Safety</a>
+    <a href="#cases">12. Case Simulation</a>
+    <a href="#refs">13. References</a>
+
+    <div style="margin-top:10px">
+      <h2>Local fields</h2>
+      <div class="field"><label class="hint">Code #: </label><input id="codeNum" placeholder="e.g., *999*"></div>
+      <div class="field"><label class="hint">MTP #: </label><input id="mtpNum" placeholder="blood bank ext."></div>
+      <div class="field"><label class="hint">RSI Cart: </label><input id="rsiLoc" placeholder="where?"></div>
+      <div class="hint">Saved automatically on this device.</div>
+    </div>
+    <div style="margin-top:14px" class="callout">
+      ⚠️ Verify all doses against your local protocol. This hub is a rapid aid, not a substitute for clinical judgment.
+    </div>
+  </nav>
+
+  <main class="content">
+    <!-- Algorithms -->
+    <section class="group" id="algorithms">
+      <h2>1. Critical Life-Saving Algorithms <span class="pill">ACLS / PALS / ATLS / Airway / MTP</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>ACLS — Shockable (VF/VT) <span class="tag">Defib first</span></summary>
+          <div class="copy">Defib 200 J biphasic → CPR 2 min → rhythm check; Epi 1 mg IV q3–5 min; Amiodarone 300 mg IV push, then 150 mg. Treat reversible causes.</div>
+          <button class="btn inline" data-copy="Defib 200 J biphasic → CPR 2 min → rhythm check; Epi 1 mg IV q3–5 min; Amiodarone 300 mg IV push, then 150 mg.">Copy</button>
+        </details>
+
+        <details class="card">
+          <summary>ACLS — Non-shockable (PEA/Asystole) <span class="tag">CPR + Epi</span></summary>
+          <ul>
+            <li>High-quality CPR 2 min cycles.</li>
+            <li>Epinephrine 1 mg IV q3–5 min.</li>
+            <li>Correct Hs & Ts.</li>
+          </ul>
+        </details>
+
+        <details class="card">
+          <summary>PALS — Cardiac Arrest <span class="tag">Weight-based</span></summary>
+          <ul>
+            <li>Defib 4 J/kg (shockable).</li>
+            <li>Epinephrine 0.01 mg/kg IV (0.1 mL/kg of 1:10,000) q3–5 min.</li>
+          </ul>
+        </details>
+
+        <details class="card">
+          <summary>Airway Strategy <span class="tag">Plan A → D</span></summary>
+          <ol>
+            <li><b>Plan A</b>: RSI (optimize position, pre-oxygenation, first-pass with bougie).</li>
+            <li><b>Plan B</b>: Bougie-assisted or LMA rescue.</li>
+            <li><b>Plan C</b>: Alternate approach / awake.</li>
+            <li><b>Plan D</b>: Surgical airway (cricothyrotomy).</li>
+          </ol>
+        </details>
+
+        <details class="card">
+          <summary>Trauma (ATLS) & Hemorrhage <span class="tag">ABCDE • TXA • Binder</span></summary>
+          <ul>
+            <li>Primary survey ABCDE; control external bleeding immediately.</li>
+            <li>Pelvic binder for suspected pelvic fracture.</li>
+            <li>TXA 1 g IV over 10 min (≤3 h) → 1 g over 8 h.</li>
+          </ul>
+        </details>
+
+        <details class="card">
+          <summary>Massive Transfusion Protocol (MTP) <span class="tag">Activate early</span></summary>
+          <ul>
+            <li>Balanced PRBC:FFP:Platelets ≈ 1:1:1.</li>
+            <li>Calcium: Ca gluconate 3 g IV per ~4 units PRBC.</li>
+            <li>Warm patient; monitor ionized Ca, fibrinogen.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- Adult Doses -->
+    <section class="group" id="adult-doses">
+      <h2>2. Adult Time-Critical Drug Doses <span class="pill">RSI • Pressors • Antidotes</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>RSI Induction</summary>
+          <div class="copy">Ketamine 1–2 mg/kg IV • Etomidate 0.3 mg/kg IV • Propofol 1–2 mg/kg IV (hypotension risk).</div>
+          <button class="btn inline" data-copy="Ketamine 1–2 mg/kg IV; Etomidate 0.3 mg/kg IV; Propofol 1–2 mg/kg IV (hypotension risk).">Copy</button>
+        </details>
+        <details class="card">
+          <summary>Paralytics</summary>
+          <div class="copy">Succinylcholine 1–1.5 mg/kg IV • Rocuronium 1.2 mg/kg IV (RSI).</div>
+          <button class="btn inline" data-copy="Succinylcholine 1–1.5 mg/kg IV; Rocuronium 1.2 mg/kg IV (RSI).">Copy</button>
+        </details>
+        <details class="card">
+          <summary>Pressors (push + infusion)</summary>
+          <div class="copy">Push-dose: Epi 10–20 mcg IV (from 10 mcg/mL) • Phenylephrine 50–200 mcg IV. 
+          Infusions: Norepi 0.05–1 mcg/kg/min • Epi 0.02–1 mcg/kg/min • Vasopressin 0.03 U/min.</div>
+          <button class="btn inline" data-copy="Push-dose: Epinephrine 10–20 mcg IV; Phenylephrine 50–200 mcg IV. Infusions: Norepinephrine 0.05–1 mcg/kg/min; Epinephrine 0.02–1 mcg/kg/min; Vasopressin 0.03 U/min.">Copy</button>
+        </details>
+        <details class="card">
+          <summary>Key Antidotes</summary>
+          <div class="copy">Naloxone 0.04 mg IV (titrate) • Calcium gluconate 3 g IV (hyperK/CCB/BB tox) or CaCl₂ 1 g IV central • Hydroxocobalamin 5 g IV • Intralipid 20% 1.5 mL/kg bolus → 0.25 mL/kg/min.</div>
+          <button class="btn inline" data-copy="Naloxone 0.04 mg IV (titrate); Ca gluconate 3 g IV (or CaCl2 1 g IV central); Hydroxocobalamin 5 g IV; Intralipid 20% 1.5 mL/kg bolus → 0.25 mL/kg/min.">Copy</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- Pediatric -->
+    <section class="group" id="peds">
+      <h2>3. Pediatric Emergencies <span class="pill">Weight-based essentials</span></h2>
+      <div class="grid">
+        <details class="card">
+          <summary>Cardiac Arrest</summary>
+          <ul>
+            <li>Epi 0.01 mg/kg IV (0.1 mL/kg of 1:10,000) q3–5 min.</li>
+            <li>Defibrillation 4 J/kg.</li>
+          </ul>
+        </details>
+        <details class="card">
+          <summary>Peds RSI</summary>
+          <div class="copy">Ketamine 1–2 mg/kg IV • Rocuronium 1.2 mg/kg IV • Succinylcholine 2 mg/kg IV.</div>
+          <button class="btn inline" data-copy="Peds RSI: Ketamine 1–2 mg/kg; Rocuronium 1.2 mg/kg; Succinylcholine 2 mg/kg.">Copy</button>
+        </details>
+        <details class="card">
+          <summary>Seizures</summary>
+          <div class="copy">Midazolam 0.2 mg/kg IN/IM/IV (max 10 mg).</div>
+          <button class="btn inline" data-copy="Midazolam 0.2 mg/kg (max 10 mg).">Copy</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- Procedures -->
+    <section class="group" id="procedures">
+      <h2>4. Procedures <span class="pill">Landmarks • Sequence • Pearls</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>Cricothyrotomy</summary>
+          <ol>
+            <li>Identify membrane between thyroid & cricoid.</li>
+            <li>Vertical skin incision → horizontal membrane incision.</li>
+            <li>Bougie → tube; confirm and secure.</li>
+          </ol>
+        </details>
+
+        <details class="card">
+          <summary>Chest Tube — Safe Triangle (diagram)</summary>
+          <div class="svgwrap">
+            <svg viewBox="0 0 240 140" width="100%" height="140">
+              <rect x="0" y="0" width="240" height="140" rx="10" fill="none" stroke="rgba(0,0,0,.2)"/>
+              <polygon points="60,20 200,40 60,120" fill="none" stroke="#0d6c8f" stroke-width="2"/>
+              <text x="62" y="18" font-size="12" fill="currentColor">Axilla</text>
+              <text x="202" y="44" font-size="12" fill="currentColor">Lat. pec</text>
+              <text x="62" y="132" font-size="12" fill="currentColor">Lat. dorsi</text>
+              <line x1="120" y1="70" x2="200" y2="70" stroke="currentColor" stroke-dasharray="4 3"/>
+              <text x="122" y="65" font-size="12" fill="currentColor">4–5th ICS A/MAL</text>
+            </svg>
+          </div>
+          <div class="hint">Incise 4–5th ICS A/MAL; go above rib; blunt dissect → finger sweep → tube to apex/posterior.</div>
+        </details>
+
+        <details class="card">
+          <summary>Pericardiocentesis</summary>
+          <ul>
+            <li>US-guided preferred.</li>
+            <li>Subxiphoid approach 30–45° toward left shoulder (or parasternal 5th ICS).</li>
+            <li>Aspirate slowly, reassess hemodynamics.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- Danger Patterns -->
+    <section class="group" id="danger">
+      <h2>5. Immediate Danger Patterns <span class="pill">Don’t Miss</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>Posterior MI</summary>
+          <ul>
+            <li>ST depression V1–V3 with tall R → get V7–V9.</li>
+          </ul>
+        </details>
+        <details class="card">
+          <summary>aVR STE with diffuse STD</summary>
+          <div class="hint">Consider left main / 3-vessel ischemia; urgent cardiology.</div>
+        </details>
+        <details class="card">
+          <summary>Sepsis — subtle early signs</summary>
+          <div class="hint">Warm skin, rising RR, altered mentation, mild hypotension.</div>
+        </details>
+        <details class="card">
+          <summary>Spinal cord compression</summary>
+          <div class="hint">Back pain + progressive neuro deficits, urinary retention, saddle anesthesia.</div>
+        </details>
+        <details class="card">
+          <summary>Necrotizing soft tissue infection</summary>
+          <div class="hint">Pain out of proportion, rapid edema, bullae/crepitus, systemic toxicity.</div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Tox -->
+    <section class="group" id="tox">
+      <h2>6. Tox Antidotes <span class="pill">First-line</span></h2>
+      <div class="grid">
+        <details class="card"><summary>Opioids</summary><div class="copy">Naloxone 0.04 mg IV, titrate q2–3 min to RR/mental status.</div><button class="btn inline" data-copy="Naloxone 0.04 mg IV; titrate.">Copy</button></details>
+        <details class="card"><summary>Hyperkalemia</summary><div class="copy">Calcium gluconate 3 g IV (peripheral) or CaCl₂ 1 g IV (central) + temporizing measures (insulin/dextrose, albuterol, bicarb as indicated).</div></details>
+        <details class="card"><summary>Cyanide</summary><div class="copy">Hydroxocobalamin 5 g IV over 15 min (may repeat).</div></details>
+        <details class="card"><summary>Local anesthetic systemic toxicity</summary><div class="copy">Intralipid 20%: 1.5 mL/kg bolus → 0.25 mL/kg/min infusion; repeat bolus if needed.</div></details>
+      </div>
+    </section>
+
+    <!-- ECG -->
+    <section class="group" id="ecg">
+      <h2>7. ECG & Ischemia <span class="pill">Patterns & Pearls</span></h2>
+      <div class="grid">
+        <details class="card"><summary>Subtle STEMI clues</summary><ul><li>De Winter pattern, Wellens’ signs, posterior MI equivalents.</li></ul></details>
+        <details class="card"><summary>Electrical pitfalls</summary><ul><li>HyperK changes, Brugada pattern, WPW in AF (avoid AV nodal blockers).</li></ul></details>
+      </div>
+    </section>
+
+    <!-- Vent basics -->
+    <section class="group" id="vent">
+      <h2>8. Vent Basics <span class="pill">Initial settings & adjustments</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>Initial Settings (adult)</summary>
+          <ul>
+            <li>Mode: VC.</li>
+            <li>TV 6–8 mL/kg IBW (ARDS 4–6 mL/kg).</li>
+            <li>RR 16–22/min; FiO₂ 1.0 → titrate; PEEP 5–8 cmH₂O.</li>
+          </ul>
+        </details>
+        <details class="card">
+          <summary>Adjustments</summary>
+          <ul>
+            <li><b>Hypoxemia</b>: ↑FiO₂, ↑PEEP, check positioning.</li>
+            <li><b>Hypercapnia</b>: ↑RR, ↑TV within safe limits.</li>
+            <li><b>Bronchospasm</b>: low RR, longer exp time, consider neb.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- Sedation -->
+    <section class="group" id="sedation">
+      <h2>9. Sedation & Analgesia <span class="pill">ED comfort & safety</span></h2>
+      <div class="grid">
+        <details class="card"><summary>Procedural sedation</summary><ul><li>Ketamine 0.5–1 mg/kg IV (dissociation 1–2 mg/kg).</li><li>Propofol 0.5–1 mg/kg IV titrate; consider hypotension risk.</li></ul></details>
+        <details class="card"><summary>Analgesia</summary><ul><li>Ketorolac 15–30 mg IV (renal caution) • Acetaminophen 1 g PO/IV • Opioids: titrate to effect.</li></ul></details>
+      </div>
+    </section>
+
+    <!-- Imaging -->
+    <section class="group" id="imaging">
+      <h2>10. Imaging Red Flags <span class="pill">When to escalate</span></h2>
+      <div class="grid">
+        <details class="card"><summary>Head & Neuro</summary><ul><li>Thunderclap headache → SAH workup.</li><li>New focal deficit → stroke activation.</li></ul></details>
+        <details class="card"><summary>Chest</summary><ul><li>Wide mediastinum in trauma → aortic injury concern.</li><li>Pneumomediastinum with subQ air → tracheobronchial injury.</li></ul></details>
+      </div>
+    </section>
+
+    <!-- Systems -->
+    <section class="group" id="systems">
+      <h2>11. Systems & Safety <span class="pill">Customize locally</span></h2>
+      <div class="grid">
+        <details class="card" open>
+          <summary>Disaster/MCI activation steps</summary>
+          <ol>
+            <li>Announce activation; notify command center.</li>
+            <li>Clear resus bays; triage station set-up.</li>
+            <li>Assign roles; prepare MTP pathway.</li>
+          </ol>
+        </details>
+        <details class="card">
+          <summary>Team Communication</summary>
+          <ul>
+            <li>Closed-loop orders • Name-role clarity • Pre-brief & debrief.</li>
+          </ul>
+        </details>
+      </div>
+      <div class="callout" style="margin-top:10px">
+        <b>Safety reminder:</b> confirm patient identifiers, allergies, pregnancy status, and local protocol before administering critical meds.
+      </div>
+    </section>
+
+    <!-- Cases -->
+    <section class="group" id="cases">
+      <h2>12. Case Simulation <span class="pill">Prototype</span></h2>
+      <details class="card" open>
+        <summary>Case 1 — 62F with chest discomfort</summary>
+        <div id="case1">
+          <div class="hint">Goal: Think like resus lead. Your choices change vitals and outcomes.</div>
+          <div id="c1-state" class="copy" style="margin-top:8px">
+            Arrival: BP 92/58, HR 108, RR 22, SpO₂ 94% RA, pale/diaphoretic; chest pressure 7/10 started 30 min ago.<br>
+            What do you do first?
+          </div>
+          <div style="margin-top:8px; display:flex; flex-wrap:wrap">
+            <button class="btn" type="button" data-act="ecg">Get ECG now</button>
+            <button class="btn" type="button" data-act="asa">Give ASA 325 mg chewed</button>
+            <button class="btn" type="button" data-act="nitro">Give SL nitro</button>
+            <button class="btn" type="button" data-act="fluids">Start 500 mL IVF</button>
+            <button class="btn" type="button" data-act="delay">Take full history first</button>
+          </div>
+          <div id="c1-log" class="hint" style="margin-top:8px"></div>
+        </div>
+      </details>
+    </section>
+
+    <!-- References -->
+    <section class="group" id="refs">
+      <h2>13. References <span class="pill">Primary sources</span></h2>
+      <ul>
+        <li>AHA ACLS/PALS Guidelines and focused updates</li>
+        <li>ATLS® (latest edition)</li>
+        <li>Surviving Sepsis Campaign Guidelines</li>
+        <li>ARDSNet low tidal volume ventilation and updates</li>
+        <li>Tintinalli’s Emergency Medicine (9e) • Rosen’s Emergency Medicine (10e)</li>
+        <li>Goldfrank’s Toxicologic Emergencies • TOXBASE (regional)</li>
+        <li>AAEM/ACEP Clinical Policies (ACS, PE, Stroke, etc.)</li>
+      </ul>
+      <div class="hint">I can replace these with exact edition years/links per your preference and region.</div>
+    </section>
+  </main>
+
+  <footer>
+    Built for rapid recall. Validate against local policy. Dark mode reduces glare/night-shift eye strain.
+  </footer>
+</div>
+
+<script>
+(function(){
+  function ready(fn){ if(document.readyState!='loading'){ fn(); } else { document.addEventListener('DOMContentLoaded', fn);} }
+  ready(function(){
+    // THEME
+    var toggle = document.getElementById('toggle');
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var savedTheme = localStorage.getItem('theme') || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    toggle.checked = savedTheme === 'dark';
+    toggle.addEventListener('change', function(){
+      var now = toggle.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', now);
+      localStorage.setItem('theme', now);
+    }, false);
+
+    // SEARCH
+    var search = document.getElementById('search');
+    var cards = Array.prototype.slice.call(document.querySelectorAll('details.card'));
+    function clearMarks(node){
+      Array.prototype.forEach.call(node.querySelectorAll('mark.__hl'), function(m){
+        var text = document.createTextNode(m.textContent);
+        m.parentNode.replaceChild(text, m);
+      });
+    }
+    function highlight(el, q){
+      if(!q) return;
+      var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+      var nodes = [];
+      while(walker.nextNode()){ nodes.push(walker.currentNode); }
+      nodes.forEach(function(node){
+        var t = node.nodeValue;
+        if(!t) return;
+        var idx = t.toLowerCase().indexOf(q);
+        if(idx>=0 && node.parentElement && node.parentElement.tagName!=='SCRIPT'){
+          var span = document.createElement('span');
+          var before = document.createTextNode(t.slice(0, idx));
+          var mark = document.createElement('mark'); mark.className='__hl'; mark.textContent=t.slice(idx, idx+q.length);
+          var after = document.createTextNode(t.slice(idx+q.length));
+          span.appendChild(before); span.appendChild(mark); span.appendChild(after);
+          if(node.parentNode) node.parentNode.replaceChild(span, node);
+        }
+      });
+    }
+    search.addEventListener('input', function(){
+      var q = search.value.trim().toLowerCase();
+      cards.forEach(function(d){
+        clearMarks(d);
+        var text = d.innerText.toLowerCase();
+        d.style.display = q ? (text.indexOf(q)>=0 ? '' : 'none') : '';
+        if(q && text.indexOf(q)>=0) highlight(d, q);
+      });
+    }, false);
+
+    // OPEN/CLOSE ALL
+    document.getElementById('openAll').addEventListener('click', function(){ cards.forEach(function(d){ d.open = true; }); }, false);
+    document.getElementById('closeAll').addEventListener('click', function(){ cards.forEach(function(d){ d.open = false; }); }, false);
+
+    // COPY buttons with robust fallback
+    Array.prototype.forEach.call(document.querySelectorAll('button[data-copy]'), function(btn){
+      btn.addEventListener('click', function(){
+        var text = btn.getAttribute('data-copy');
+        function done(ok){
+          btn.textContent = ok ? 'Copied!' : 'Copied (tap & paste)';
+          setTimeout(function(){ btn.textContent='Copy'; }, 1200);
+        }
+        if(navigator.clipboard && window.isSecureContext){
+          navigator.clipboard.writeText(text).then(function(){ done(true); }).catch(function(){ done(false); });
+        }else{
+          var ta = document.createElement('textarea');
+          ta.value = text; document.body.appendChild(ta);
+          ta.select(); ta.setSelectionRange(0, 99999);
+          try{ document.execCommand('copy'); done(true); } catch(e){ done(false); }
+          document.body.removeChild(ta);
+        }
+      }, false);
+    });
+
+    // Local fields persistence
+    ['codeNum','mtpNum','rsiLoc'].forEach(function(id){
+      var el = document.getElementById(id);
+      var v = localStorage.getItem('ep_'+id) || '';
+      el.value = v;
+      el.addEventListener('input', function(){ localStorage.setItem('ep_'+id, el.value); }, false);
+    });
+
+    // CASE 1 SIM
+    (function(){
+      var log = document.getElementById('c1-log');
+      var state = document.getElementById('c1-state');
+      var root = document.getElementById('case1');
+      if(!root) return;
+      var didECG=false, gaveASA=false, gaveNitro=false, fluids=false, time=0, cath=false;
+      function append(msg){ log.innerHTML += (log.innerHTML?'<br>':'') + msg; }
+      function show(){
+        var vitals = 'BP '+(fluids? '98/60':'92/58')+', HR '+(gaveNitro? '116':'108')+', SpO₂ 94% RA';
+        state.innerHTML = 'Time '+time+' min • '+vitals+'<br>' +
+          (didECG? 'ECG: 2 mm ST elevations V2–V4, reciprocal depression in III, aVF.':'No ECG yet.') +
+          '<br>Next step?';
+      }
+      function end(msg){
+        append('<b>'+msg+'</b>');
+        Array.prototype.forEach.call(root.querySelectorAll('button[data-act]'), function(b){ b.disabled=true; });
+      }
+      Array.prototype.forEach.call(root.querySelectorAll('button[data-act]'), function(b){
+        b.addEventListener('click', function(e){
+          var act = e.currentTarget.getAttribute('data-act');
+          time += (act==='delay'?3:1);
+          if(act==='ecg'){ didECG=true; append('You obtained an ECG immediately. It shows anterior STEMI.'); }
+          if(act==='asa'){ gaveASA=true; append('You gave ASA 325 mg chewed.'); }
+          if(act==='nitro'){ gaveNitro=true; append('You gave SL nitro. Chest pressure drops to 5/10 but BP risks further drop.'); }
+          if(act==='fluids'){ fluids=true; append('You started 500 mL crystalloid cautiously.'); }
+          if(act==='delay'){ append('You delayed for history. Symptoms worsen.'); }
+          show();
+          if(didECG && gaveASA && !cath){
+            append('STEMI confirmed → consider cath lab activation.');
+            var btn = document.createElement('button'); btn.className='btn'; btn.textContent='Activate cath lab';
+            btn.addEventListener('click', function(){
+              cath=true; append('Cath lab activated. Door-to-balloon countdown starts.');
+              end('Good job: early ECG + ASA + activation. Consider heparin per protocol, second IV, monitor BP after nitro.');
+            }, false);
+            log.appendChild(document.createElement('br')); log.appendChild(btn);
+          }
+          if(time>=5 && !didECG){ end('Missed opportunity: no early ECG → increased morbidity. ECG within 10 min (ideally immediately).'); }
+          if(gaveNitro && !fluids && !didECG && time>=3){ append('BP dips transiently. Avoid more vasodilators before diagnosis.'); }
+        }, false);
+      });
+      show();
+    })();
+  });
+})();
+</script>
+</body>
+</html>
